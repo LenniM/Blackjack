@@ -100,4 +100,11 @@ class CardTest {
         assertTrue(new Card("AH").isAce());
         assertFalse(new Card("KH").isAce());
     }
+
+    @Test
+    void getRankUndGetSuit_gebenRangUndFarbeZurueck() {
+        Card card = new Card("10K");
+        assertEquals("10", card.getRank());
+        assertEquals("K", card.getSuit());
+    }
 }

@@ -5,56 +5,51 @@ public class Main {
     private static final int START_GUTHABEN = 500;
 
     public static void main(String[] args) {
-        // Einstiegspunkt fuer den Konsolen-Prototyp.
+        // Einstiegspunkt
+        // Spaeter koennte hier auch eine andere UI eingesetzt werden.
         UserInterface ui = new ConsoleUI();
+        
+        // Erzeugt die Instanz zur Verwaltung der Konten und Datei-Persistenz.
         AccountManager accountManager = new AccountManager();
 
-        ui.displayMessage("================---------------------------================");
-        ui.displayMessage("  Willkommen beim Blackjack-Simulator (HWR Berlin Project)");
-        ui.displayMessage("================---------------------------================");
+        ui.displayWelcomeBanner();
 
         boolean running = true;
 
         // Vorgelagerter Dialog fuer Anmeldung, Registrierung oder Gastzugang.
         while (running) {
-            ui.displayMessage("\n=== HAUPTMENUE ===");
-            ui.displayMessage("[1] Anmelden");
-            ui.displayMessage("[2] Registrieren");
-            ui.displayMessage("[3] Als Gast spielen");
-            ui.displayMessage("[4] Beenden");
-
-            String choice = ui.askInput("Auswahl:");
+        	
+        	// Liest die gewählte Menüoption des Hauptmenüs ein.
+            String choice = ui.askMainMenuChoice();
             Player activePlayer = null;
 
-            if ("1".equals(choice)) {
-                String user = ui.askInput("Benutzername:");
-                String pass = ui.askInput("Passwort:");
-                activePlayer = accountManager.login(user, pass);
+            if ("1".equals(choice)) {		// Option 1: Anmeldung eines bestehenden Benutzers.
+                String[] credentials = ui.askLoginCredentials(); 	// Erfragt Benutzername und Passwort über die Konsolen-UI.
+                activePlayer = accountManager.login(credentials[0], credentials[1]);
                 if (activePlayer == null) {
                     ui.displayMessage("Anmeldung fehlgeschlagen! Ungueltiges Passwort oder Benutzer existiert nicht.");
                 }
-            } else if ("2".equals(choice)) {
-                String user = ui.askInput("Neuer Benutzername:");
-                String pass = ui.askInput("Neues Passwort:");
-                if (accountManager.register(user, pass, START_GUTHABEN)) {
+            } else if ("2".equals(choice)) {		// Option 2: Registrierung eines neuen Kontos.
+                String[] credentials = ui.askRegistrationCredentials();
+                if (accountManager.register(credentials[0], credentials[1], START_GUTHABEN)) {
                     ui.displayMessage("Registrierung erfolgreich! 500 Chips Guthaben wurden gutgeschrieben.");
-                    activePlayer = accountManager.login(user, pass);
+                    activePlayer = accountManager.login(credentials[0], credentials[1]);
                 } else {
                     ui.displayMessage("Benutzername ist bereits vergeben.");
                 }
-            } else if ("3".equals(choice)) {
+            } else if ("3".equals(choice)) {		// Option 3: Starten einer Session als temporärer Gast-Spieler
                 activePlayer = accountManager.createGuestPlayer(START_GUTHABEN);
                 ui.displayMessage("Als Gast angemeldet. Startguthaben: 500 Chips.");
-            } else if ("4".equals(choice)) {
+            } else if ("4".equals(choice)) {		// Option 4: Beenden des Programms.
                 running = false;
-                ui.displayMessage("Vielen Dank fürs Spielen! Bis zum naechsten Mal.");
+                ui.displayMessage("Vielen Dank fuers Spielen! Bis zum naechsten Mal.");
                 continue;
             } else {
                 ui.displayMessage("Ungueltige Option. Bitte erneut versuchen.");
                 continue;
             }
 
-            // Spiel starten, sobald ein gueltiger Player vorliegt.
+            // Game ist der abstrakte Basistyp, Blackjack die konkrete Implementierung.
             if (activePlayer != null) {
                 Game game = new Blackjack(ui, activePlayer);
                 game.start();
@@ -62,7 +57,7 @@ public class Main {
                 // Speichern nach Spielende (nur fuer registrierte Benutzer).
                 if (!activePlayer.isGuest()) {
                     accountManager.saveAccounts();
-                    ui.displayMessage("Fortschritt für " + activePlayer.getUsername() + " wurde gespeichert.");
+                    ui.displaySaveConfirmation(activePlayer.getUsername());
                 }
             }
         }

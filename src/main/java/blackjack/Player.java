@@ -88,11 +88,12 @@ public class Player extends Account implements Serializable {
         return chips;
     }
 
-    // Erlaubt das spätere Aufladen des Guthabens bei Bankrott.
+    // Erlaubt das Aufladen des Chip-Guthabens im Einstellungsmenue.
     public void addChips(int amount) {
-        if (amount > 0) {
-            this.chips += amount;
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Aufladebetrag muss groesser als 0 sein.");
         }
+        this.chips += amount;
     }
 
     public int getCurrentBet() {

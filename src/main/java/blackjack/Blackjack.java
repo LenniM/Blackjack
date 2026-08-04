@@ -8,7 +8,7 @@ public class Blackjack extends Game {
     private static final int DEALER_STANDS_AT = 17;
 
     private final UserInterface ui;
-    private final Player player; // Der angemeldete oder Gast-Spieler
+    private final Player player;
     private Deck deck;
     private Hand playerHand;
     private Hand dealerHand;
@@ -20,17 +20,17 @@ public class Blackjack extends Game {
         super();
         this.ui = ui;
         this.player = player;
-        this.deck = new Deck(8);
+        this.deck = new Deck(8); // Erzeugt standardmäßig einen Kartensatz aus 8 gemischten Decks.
         this.minBet = 10;
         this.maxBet = 500;
     }
 
     @Override
     public void start() {
-        // Startet die Hauptschleife fuer den Spielbetrieb.
+        // Ein Start spielt die Haupt-Menueschleife ab.
         state = "RUNNING";
         startTime = LocalDateTime.now();
-        gameLoop();
+        sessionLoop();
         state = "FINISHED";
     }
 
@@ -41,47 +41,74 @@ public class Blackjack extends Game {
         start();
     }
 
-    private void gameLoop() {
+    private void sessionLoop() {
         // Menueschleife waehrend der laufenden Spielsession.
-        boolean continuePlaying = true;
-        while (continuePlaying) {
-            ui.displayMessage("\n-------------------------------------------");
-            ui.displayMessage("Spieler: " + player.getUsername() + " | Guthaben: " + player.getChips() + " Chips");
-            if (player.getMaxBetLimit() > 0) {
-                ui.displayMessage("Max. Rundenlimit: " + player.getMaxBetLimit() + " Chips");
-            }
-            ui.displayMessage("-------------------------------------------");
-            ui.displayMessage("[1] Runde spielen | [2] Einstellungen (Rundenlimit) | [3] Hauptmenue");
+        boolean inSession = true;
+        while (inSession) {
+            String choice = ui.askSessionChoice(player);
 
-            String choice = ui.askInput("Auswahl:");
+            // Option 1: Eine neue Spielrunde starten.
             if ("1".equals(choice)) {
-                // Automatisches Aufladen bei Bankrott.
+            	// Prüft vor Rundenstart, ob ausreichend Chips für den Mindesteinsatz vorliegen.
                 if (player.getChips() < minBet) {
-                    ui.displayMessage("Nicht genug Chips! Mindesteinsatz ist " + minBet + ". Aufladen mit 500 Chips...");
-                    player.addChips(500);
+                    ui.displayMessage("Nicht genug Chips für den Mindesteinsatz (" + minBet + "). Bitte Guthaben aufladen!");
+                } else {
+                	// Startet den regulären Ablauf einer einzelnen Blackjack-Runde.
+                    playSingleRound();
                 }
-                playSingleRound();
+            // Option 2: Account-Einstellungen verwalten.
             } else if ("2".equals(choice)) {
-                configureSettings();
+                openSettingsMenu();
+            // Option 3: Rückkehr ins Hauptmenü der Anwendung.
             } else if ("3".equals(choice)) {
-                continuePlaying = false;
+                inSession = false;
             } else {
                 ui.displayMessage("Ungueltige Option.");
             }
         }
     }
 
-    private void configureSettings() {
-        // Einstellungen waehrend der Runden: Maximales Einsatzlimit pro Runde anpassen.
-        ui.displayMessage("\n=== ACCOUNT EINSTELLUNGEN ===");
-        ui.displayMessage("Aktuelles maximales Rundenlimit: " + (player.getMaxBetLimit() > 0 ? player.getMaxBetLimit() + " Chips" : "Kein Limit"));
-        String input = ui.askInput("Neues maximales Einsatzlimit pro Runde eingeben (0 fuer kein Limit):");
+    private void openSettingsMenu() {
+        // Untermenü für Statistiken, Rundenlimit und Aufladen.
+        boolean inSettings = true;
+        while (inSettings) {
+        	// Blendet das Untermenü ein und erfasst die Eingabe des Benutzers.
+            String choice = ui.askSettingsChoice();
+         // Blendet die detaillierten Kontostatistiken ein.
+            if ("1".equals(choice)) {
+                ui.displayStats(player);
+            } else if ("2".equals(choice)) {	// Leitet den Prozess zur Festlegung eines Rundenlimits ein.
+                handleSetBetLimit();
+            } else if ("3".equals(choice)) {	// Öffnet den Dialog zum erhöhen des Chip-Guthabens.
+                handleRechargeChips();
+            } else if ("4".equals(choice)) {	// Verlässt das Einstellungsuntermenü.
+                inSettings = false;
+            } else {
+                ui.displayMessage("Ungueltige Auswahl.");
+            }
+        }
+    }
+
+    private void handleSetBetLimit() {
+        // Fragt das neue Rundenlimit ab und setzt es im Account.
         try {
-            int limit = Integer.parseInt(input);
-            player.setMaxBetLimit(limit);
-            ui.displayMessage("Maximales Einsatzlimit pro Runde erfolgreich auf " + (limit > 0 ? limit + " Chips" : "kein Limit") + " gesetzt.");
+            int limit = ui.askNewMaxBetLimit(player.getMaxBetLimit());
+            player.setMaxBetLimit(limit); // Speichert das eingegebene Limit im Account-Objekt ab.
+         // Gibt die Bestätigung über das geänderte Limit aus.
+            ui.displayMessage("Rundenlimit erfolgreich auf " + (limit > 0 ? limit + " Chips" : "kein Limit") + " gesetzt.");
         } catch (IllegalArgumentException e) {
-            ui.displayMessage("Fehler: " + e.getMessage());
+            ui.displayMessage("Fehler: " + e.getMessage()); // Reagiert auf ungültige Betragseingaben mit einer Hinweismeldung.
+        }
+    }
+
+    private void handleRechargeChips() {
+        // Erlaubt das freie Aufladen des Chip-Guthabens.
+        try {
+            int amount = ui.askRechargeAmount(); 	// Fragt den aufzuladenden Chip-Betrag vom Spieler ab.
+            player.addChips(amount);
+            ui.displayMessage("Erfolgreich " + amount + " Chips aufgeladen. Neuer Kontostand: " + player.getChips() + " Chips.");
+        } catch (IllegalArgumentException e) {
+            ui.displayMessage("Fehler: " + e.getMessage()); // Reagiert auf ungültige Betragseingaben mit einer Hinweismeldung.
         }
     }
 
@@ -96,31 +123,34 @@ public class Blackjack extends Game {
     }
 
     private void playSingleRound() {
-        // Führt eine einzelne Spielrunde durch und zieht den Einsatz ab.
+        // Fuehrt eine einzelne Spielrunde durch und zieht den Einsatz ab.
         int bet = 0;
         while (true) {
             bet = ui.askBet(minBet, maxBet);
             try {
-                player.placeBet(bet);
+                player.placeBet(bet);	// Bucht den gewählten Einsatz vom Chip-Konto ab.
                 break;
             } catch (IllegalArgumentException e) {
-                ui.displayMessage("Fehler bei Einsatzplatzierung: " + e.getMessage());
+                ui.displayMessage("Fehler bei Einsatzplatzierung: " + e.getMessage());	// Informiert bei Limit- oder Guthabenüberschreitung.
             }
         }
 
+        // Es gibt genau eine Spielerhand und eine Dealerhand.
         playerHand = new Hand();
         dealerHand = new Hand();
         playerHand.setBet(bet);
 
         // Klassischer Start: Spieler, Dealer, Spieler, Dealer.
+        // Die zweite Dealerkarte wird spaeter verdeckt angezeigt.
         playerHand.addCard(drawCard());
         dealerHand.addCard(drawCard());
         playerHand.addCard(drawCard());
         dealerHand.addCard(drawCard());
 
-        playerTurn();
+        playerTurn(); 	// Führt die interaktive Zugphase des Spielers aus.
 
-        if (!playerHand.isBusted()) {
+        // Der Dealer zieht nur, wenn der Spieler nicht bereits überkauft hat
+        if (!playerHand.isBusted()) {	
             dealerPlay();
         }
 
@@ -130,13 +160,17 @@ public class Blackjack extends Game {
     private void playerTurn() {
         // Der Spieler darf solange handeln, bis er steht, bustet oder Blackjack hat.
         while ("RUNNING".equals(state) && "ACTIVE".equals(playerHand.getStatus())) {
-            ui.displayDealerHand(dealerHand, true);
+        	
+        	// Stellt die aktuelle Spielsituation auf der Konsole dar.
+        	ui.displayDealerHand(dealerHand, true);
             ui.displayHand(playerHand, player.getUsername());
-
+            
+            // Beendet die Entscheidungsphase sofort bei einem Natural Blackjack.
             if (playerHand.isBlackjack()) {
                 return;
             }
 
+            // Holt die gewählte Spielaktion ("HIT" oder "STAND") ein.
             String action = ui.askAction(List.of("HIT", "STAND"));
             if ("HIT".equals(action)) {
                 hit(playerHand);
@@ -159,35 +193,31 @@ public class Blackjack extends Game {
     }
 
     private void evaluateRound() {
-        // Wertet das Ergebnis aus und verbucht Gewinn/Verlust auf dem Spielerobjekt.
+        // Erst am Ende werden die finalen Werte verglichen.
         int playerValue = playerHand.calculateValue();
         int dealerValue = dealerHand.calculateValue();
 
-        ui.displayMessage("\nEndstand:");
-        ui.displayHand(playerHand, player.getUsername());
-        ui.displayDealerHand(dealerHand, false);
-
         if (playerHand.isBusted()) {
-            ui.displayMessage("Spieler verliert: ueber 21.");
-            player.loseBet();
+            player.loseBet(); // Einsatz verfaellt
+            ui.displayRoundResult(playerHand, dealerHand, "BUST", player.getUsername());
         } else if (dealerHand.isBusted()) {
-            ui.displayMessage("Spieler gewinnt (1:1): Dealer ist ueber 21.");
-            player.winBet(playerHand.getBet()); // 1:1 Gewinn
+            player.winBet(playerHand.getBet()); // Regulaerer Sieg 1:1
+            ui.displayRoundResult(playerHand, dealerHand, "DEALER_BUST", player.getUsername());
         } else if (playerHand.isBlackjack() && !dealerHand.isBlackjack()) {
-            ui.displayMessage("Natural Blackjack! Spieler gewinnt im Verhältnis 3:2.");
-            player.winBet((int) (playerHand.getBet() * 1.5)); // 3:2 Gewinn
+            player.winBet((int) (playerHand.getBet() * 1.5)); // Natural Blackjack 3:2
+            ui.displayRoundResult(playerHand, dealerHand, "BLACKJACK", player.getUsername());
         } else if (dealerHand.isBlackjack() && !playerHand.isBlackjack()) {
-            ui.displayMessage("Dealer hat Blackjack. Spieler verliert.");
-            player.loseBet();
+            player.loseBet(); // Einsatz verfaellt
+            ui.displayRoundResult(playerHand, dealerHand, "DEALER_BLACKJACK", player.getUsername());
         } else if (playerValue > dealerValue) {
-            ui.displayMessage("Spieler gewinnt (1:1).");
-            player.winBet(playerHand.getBet()); // 1:1 Gewinn
+            player.winBet(playerHand.getBet()); // Regulaerer Sieg 1:1
+            ui.displayRoundResult(playerHand, dealerHand, "WIN", player.getUsername());
         } else if (playerValue < dealerValue) {
-            ui.displayMessage("Dealer gewinnt.");
-            player.loseBet();
+            player.loseBet(); // Einsatz verfaellt
+            ui.displayRoundResult(playerHand, dealerHand, "LOSE", player.getUsername());
         } else {
-            ui.displayMessage("Unentschieden (Push). Einsatz wird erstattet.");
-            player.pushBet();
+            player.pushBet(); // Push erstattet Einsatz
+            ui.displayRoundResult(playerHand, dealerHand, "PUSH", player.getUsername());
         }
     }
 

@@ -1,18 +1,16 @@
-# Blackjack Java-Prototyp
+# Blackjack Simulator (Java)
 
-Ein erster Konsolen-Prototyp fuer Blackjack mit deutscher Karten-Notation.
+Ein konsolenbasierter Blackjack-Simulator, entwickelt im Rahmen der Belegarbeit für das Modul **Objektorientierte Programmierung** an der HWR Berlin.
 
-## Enthalten
+## Wofür ist das Projekt?
+Das Projekt demonstriert die praktische Anwendung objektorientierter Softwarearchitektur in Java am Beispiel des Kartenspiels Blackjack. Es bildet den kompletten Spielablauf zwischen einem menschlichen Spieler und einem automatisierten Dealer ab und setzt zentrale OOP-Konzepte wie Kapselung, Vererbung, Abstraktion über Interfaces sowie Dateipersistenz um.
 
-- Immutable `Card` mit Codes wie `4H`, `10K`, `AP`, `BZ`
-- `Deck` mit mehreren Kartendecks, Mischen und Ziehen
-- `Hand` mit Ass-Sonderfall in `calculateValue()`
-- einfache Konsolen-UI
-- eine spielbare Runde mit `HIT` und `STAND`
-
-Accounts, Persistenz und erweiterte Aktionen wie `DOUBLE`, `SPLIT` und `SURRENDER` sind noch nicht als Spielablauf implementiert.
-
-Der Prototyp verwendet String-Statuswerte statt Enums und erzeugt keine eindeutige Spiel-ID.
+## Inhalt & Features
+- **Spieldomäne:** Objektorientierte Abbildung von Karten (`Card`), Kartendecks (`Deck`) und Spielerhänden (`Hand`) inklusive dynamischer Ass-Wertung (Soft/Hard Hand).
+- **Spielsteuerung:** Regelbasierter Rundenablauf, automatische Dealer-KI (zieht obligatorisch bis 17 Punkte) und korrekte Gewinnabrechnung (1:1, 3:2 bei Natural Blackjack, Push).
+- **Benutzerverwaltung & Persistenz:** Registrierung, Login und Gastmodus. Speicherung von Guthaben, individuellen Einsatzlimits und Rundenstatistiken über Java-Objektserialisierung (`accounts.ser`).
+- **Entkoppelte Architektur:** Strikte Trennung von Spiellogik und Benutzeroberfläche über das `UserInterface`-Interface und die Konsolenumsetzung `ConsoleUI`.
+- **Qualitätssicherung:** Abgesichert durch automatisierte Unit-Tests (JUnit 5) für die Kernklassen der Spieldomäne.
 
 ## Starten
 
